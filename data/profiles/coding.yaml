@@ -1,0 +1,10 @@
+id: coding
+name: Codex 编程与仓库任务
+weights:
+  software_engineering: 0.40
+  agent_tools: 0.20
+  reasoning: 0.20
+  general: 0.20
+constraints:
+  min_confidence: 0.55
+  require_tool_calling: true

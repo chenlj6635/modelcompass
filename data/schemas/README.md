@@ -1,0 +1,1 @@
+Schemas are defined in src/modelcompass/schemas.py and documented in docs/contracts.md.

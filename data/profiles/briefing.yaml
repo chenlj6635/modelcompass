@@ -1,0 +1,7 @@
+id: briefing
+name: 网页研究与每日简报
+weights:
+  agent_tools: 0.30
+  long_context: 0.25
+  instruction_following: 0.20
+  general: 0.25

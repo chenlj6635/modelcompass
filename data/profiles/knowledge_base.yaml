@@ -1,0 +1,7 @@
+id: knowledge_base
+name: 中文知识库与长文档
+weights:
+  chinese: 0.30
+  long_context: 0.35
+  instruction_following: 0.20
+  general: 0.15

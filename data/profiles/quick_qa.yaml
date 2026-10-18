@@ -1,0 +1,7 @@
+id: quick_qa
+name: 快速日常问答
+weights:
+  general: 0.45
+  chinese: 0.25
+  reasoning: 0.20
+  instruction_following: 0.10

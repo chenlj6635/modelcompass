@@ -1,0 +1,7 @@
+id: research
+name: 科研与文献推理
+weights:
+  science_reasoning: 0.35
+  mathematics: 0.25
+  reasoning: 0.25
+  long_context: 0.15
