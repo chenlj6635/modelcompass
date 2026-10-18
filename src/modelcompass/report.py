@@ -15,7 +15,13 @@ def validate_bundle(bundle: dict) -> None:
         for i, value in enumerate(values):
             try: SCHEMA_TYPES[key].model_validate(value)
             except ValueError as exc: raise ValueError(f"{key}[{i}]: {exc}") from exc
-def load_bundle(path: Path) -> dict: bundle = _json(path); validate_bundle(bundle); return bundle
+def load_bundle(path: Path) -> dict:
+    payload = _json(path)
+    if isinstance(payload, dict) and "source_id" in payload and "fetched_at" in payload:
+        schemas.SourceSnapshot.model_validate(payload)
+        return {"snapshots": [payload]}
+    validate_bundle(payload)
+    return payload
 def read_rows(path: Path) -> list[dict]:
     rows = _json(path)
     if not isinstance(rows, list) or any(not isinstance(x, dict) for x in rows): raise ValueError("rows must be a JSON array of objects")
