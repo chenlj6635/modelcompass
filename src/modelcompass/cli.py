@@ -1,80 +1,31 @@
 from __future__ import annotations
-
-import argparse
-import json
+import argparse, json, sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-
-from .report import write_report
-from .scoring import score_scenario
-
-
-def _load_json(path: Path | None) -> list[dict]:
-    if path is None or not path.exists():
-        return []
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return data if isinstance(data, list) else [data]
-
-
-def _load_profile(path: Path | None) -> dict:
-    if path is None or not path.exists():
-        return {"id": "default", "name": "Default", "weights": {}, "constraints": {}}
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="modelcompass")
-    sub = parser.add_subparsers(dest="command", required=True)
-    validate = sub.add_parser("data-validate")
-    validate.add_argument("--file", type=Path)
-    score = sub.add_parser("score")
-    score.add_argument("--observations", type=Path)
-    score.add_argument("--profile", type=Path)
-    score.add_argument("--output", type=Path)
-    pareto = sub.add_parser("pareto")
-    pareto.add_argument("--input", type=Path)
-    pareto.add_argument("--output", type=Path)
-    report = sub.add_parser("report")
-    report.add_argument("--format", choices=["html", "json", "csv"], default="html")
-    report.add_argument("--input", type=Path)
-    report.add_argument("--output", type=Path, default=Path("report.html"))
-    serve = sub.add_parser("serve")
-    serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=8000)
-    return parser
-
-
+from .report import load_bundle, pareto_rows, read_rows, render_html, score_bundle, write_report
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    if args.command == "data-validate":
-        rows = _load_json(args.file)
-        print(json.dumps({"valid": True, "records": len(rows)}, ensure_ascii=False))
-        return 0
-    if args.command == "score":
-        observations = _load_json(args.observations)
-        profile = _load_profile(args.profile)
-        if not profile.get("weights"):
-            profile["weights"] = {str(item.get("ability_cluster")): 1.0 for item in observations if item.get("ability_cluster")}
-        variants = sorted({item.get("model_variant_id", "") for item in observations})
-        rows = [score_scenario(v, observations, profile.get("weights", {})).__dict__ for v in variants if v]
-        if args.output:
-            args.output.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(json.dumps(rows, ensure_ascii=False))
-        return 0
-    if args.command == "pareto":
-        rows = _load_json(args.input)
-        if args.output:
-            args.output.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(json.dumps(rows, ensure_ascii=False))
-        return 0
-    if args.command == "report":
-        write_report(_load_json(args.input), args.output, args.format)
-        print(args.output)
-        return 0
-    if args.command == "serve":
-        print(f"ModelCompass localhost service: http://{args.host}:{args.port}")
-        return 0
-    return 1
-
-
-if __name__ == '__main__':
-    raise SystemExit(main())
+    p=argparse.ArgumentParser(prog="modelcompass"); s=p.add_subparsers(dest="command",required=True); d=s.add_parser("data").add_subparsers(dest="operation",required=True); v=d.add_parser("validate"); v.add_argument("--input",type=Path,required=True)
+    for name in ("score","pareto","report","serve"):
+        c=s.add_parser(name); c.add_argument("--input",type=Path,required=name in ("score","pareto"));
+        if name != "serve": c.add_argument("--output",type=Path,default=Path("report.html" if name=="report" else name+".json"))
+        if name=="score": c.add_argument("--scenario")
+        if name=="pareto": c.add_argument("--axes",nargs=2,action="append",required=True)
+        if name=="report": c.add_argument("--format",choices=("json","csv","html"),default="html")
+        if name=="serve": c.add_argument("--host",choices=("localhost","127.0.0.1"),default="127.0.0.1"); c.add_argument("--port",type=int,default=8000)
+    a=p.parse_args(argv)
+    try:
+        if a.command=="data": load_bundle(a.input); print("valid")
+        elif a.command=="score": write_report(score_bundle(load_bundle(a.input),a.scenario),a.output,"json")
+        elif a.command=="pareto": write_report(pareto_rows(read_rows(a.input),a.axes),a.output,"json")
+        elif a.command=="report": write_report(read_rows(a.input) if a.input else [],a.output,a.format)
+        else:
+            page=render_html(read_rows(a.input) if a.input else []).encode();
+            class H(BaseHTTPRequestHandler):
+                def do_GET(self): self.send_response(200); self.send_header("Content-Type","text/html; charset=utf-8"); self.send_header("Content-Length",str(len(page))); self.end_headers(); self.wfile.write(page)
+            srv=ThreadingHTTPServer((a.host,a.port),H); print(f"http://{a.host}:{srv.server_port}",flush=True)
+            try: srv.serve_forever()
+            except KeyboardInterrupt: pass
+            finally: srv.server_close()
+    except (ValueError,OSError,RuntimeError) as exc: print(f"error: {exc}",file=sys.stderr); return 1
+    return 0
+if __name__ == "__main__": raise SystemExit(main())
