@@ -1,0 +1,30 @@
+[
+  {
+    "model_variant_id": "openai/gpt-6.1-sol@2026-10-01/reasoning-max",
+    "quality": 0.72,
+    "coverage": 1.0,
+    "confidence": 0.6375,
+    "cluster_scores": {
+      "science_reasoning": 0.72
+    },
+    "missing_clusters": [],
+    "evidence": [
+      {
+        "model_variant_id": "openai/gpt-6.1-sol@2026-10-01/reasoning-max",
+        "benchmark_id": "gpqa",
+        "ability_cluster": "science_reasoning",
+        "score": 72.0,
+        "score_unit": "percent",
+        "source_url": "https://example.org/gpqa",
+        "observed_at": "2026-10-10"
+      }
+    ],
+    "rejected_reason": null,
+    "public_task_cost": 0.08,
+    "sources": [
+      "https://example.org/gpqa",
+      "https://example.org/cost"
+    ],
+    "warnings": []
+  }
+]
